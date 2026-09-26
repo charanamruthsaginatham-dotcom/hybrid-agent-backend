@@ -1,0 +1,13 @@
+# HYBRID AGENT - cloud backend for Render
+# Minimal deps for HTTP server + AI routing (no gesture, Bluetooth, or local apps)
+
+# For Claude API (https://github.com/anthropics/anthropic-sdk-python)
+anthropic>=0.28
+
+# For Gemini API
+google-generativeai>=0.3
+
+# For OpenAI-compatible endpoints and basic HTTP
+requests>=2.31
+
+# Python standard library covers: http.server, json, os, subprocess, threading

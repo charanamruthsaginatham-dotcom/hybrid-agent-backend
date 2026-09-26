@@ -1,0 +1,13 @@
+# HYBRID AGENT gesture mouse
+# Python 3.9-3.12 (mediapipe has no 3.13 wheels yet)
+
+mediapipe>=0.10.9,<0.11
+opencv-python>=4.8
+numpy<2.0          # mediapipe 0.10.x is built against the 1.x ABI
+
+# Only needed off Windows. On Windows the built-in ctypes backend is used,
+# which is faster and needs nothing installed.
+pyautogui>=0.9.54 ; sys_platform != "win32"
+
+# boards.py - USB serial to Arduino / ESP32 / Pico (optional)
+pyserial>=3.5

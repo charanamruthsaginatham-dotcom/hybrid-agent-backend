@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A.D.A Console</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="HYBRID AGENT's A.D.A console: gesture-driven cursor, multi-model matrix, live telemetry.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+<div class="field"></div>
+<div class="scan"></div>
+
+<div class="hud">
+
+  <!-- ============ HEADER ============ -->
+  <header class="panel bar">
+    <div class="brand">
+      <div class="sigil">ADA</div>
+      <div>
+        <div class="title">A.D.A <em>//</em> HYBRID AGENT MATRIX</div>
+        <div class="subtitle"><a class="homelink" href="index.html">&larr; HYBRID AGENT</a> &middot; BUILD 4.2.0</div>
+      </div>
+    </div>
+
+    <div class="selector">
+      <div class="seg" role="group" aria-label="Active model">
+        <button type="button" data-model="gemini" aria-pressed="true" style="--m-color:#00f0ff"><span class="dot"></span>Google Gemini</button>
+        <button type="button" data-model="claude" aria-pressed="false" style="--m-color:#a05cff"><span class="dot"></span>Anthropic Claude</button>
+        <button type="button" data-model="ollama" aria-pressed="false" style="--m-color:#39ff9e"><span class="dot"></span>Local Ollama</button>
+      </div>
+    </div>
+
+    <div class="pills">
+      <div class="pill live" id="pill-api"><span class="led"></span>API <b>LINKED</b></div>
+      <div class="pill" id="pill-cam"><span class="led"></span>CAM <b>OFFLINE</b></div>
+      <div class="pill live" id="pill-sys"><span class="led"></span>SYS <b>ACTIVE</b></div>
+      <button type="button" class="pill authchip" id="keychip"><span class="led"></span>KEYS <b>SIM</b></button>
+      <button type="button" class="pill authchip" id="appchip"><span class="led"></span>APPS <b>OPEN</b></button>
+      <button type="button" class="pill authchip" id="btchip"><span class="led"></span>BT <b>OFF</b></button>
+      <button type="button" class="pill authchip" id="devchip"><span class="led"></span>DEV <b>0</b></button>
+      <button type="button" class="pill authchip" id="authchip"><span class="led"></span>OPR <b>GUEST</b></button>
+    </div>
+  </header>
+
+  <!-- ============ STAGE ============ -->
+  <div class="stage">
+
+    <!-- left: controls + optical feed -->
+    <div class="col left">
+      <section class="panel">
+        <div class="panel-head"><span class="label">Control Panel</span><span class="rule"></span></div>
+        <div class="controls">
+          <button type="button" class="ctl" id="btn-cam" aria-pressed="false">
+            <span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 7h4l2-2h8l2 2h4v12H2z"></path><circle cx="12" cy="13" r="3.4"></circle></svg></span>
+            Live Camera Preview<span class="state">OFF</span>
+          </button>
+          <button type="button" class="ctl" id="btn-gesture" aria-pressed="false">
+            <span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11"></path><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"></path><path d="M14 11.5V6.5a1.5 1.5 0 0 1 3 0V15a5 5 0 0 1-5 5h-1a6 6 0 0 1-5-3l-2-3.5a1.6 1.6 0 0 1 2.6-1.8L8 13.5"></path></svg></span>
+            Gesture Matrix<span class="state">OFF</span>
+          </button>
+          <button type="button" class="ctl" id="btn-kb" aria-pressed="false">
+            <span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"></path></svg></span>
+            Air Keyboard<span class="state">OFF</span>
+          </button>
+          <button type="button" class="ctl talk" id="btn-talk" data-live="0">
+            <span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"></path></svg></span>
+            Push to Talk<span class="state">HOLD</span>
+          </button>
+          <button type="button" class="switch" id="btn-voice" aria-pressed="false">
+            Live Voice Mode<span class="track"><i></i></span>
+          </button>
+        </div>
+        <div class="meter" id="meter" aria-hidden="true"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="label">Optical Feed</span><span class="label" id="cam-res">&mdash;</span></div>
+        <div class="camwrap">
+          <video id="feed" playsinline muted autoplay></video>
+          <canvas id="cam" width="640" height="400"></canvas>
+          <div class="camoff" id="camoff">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 7h4l2-2h8l2 2h4v12H2z"></path><path d="M3 3l18 18"></path></svg>
+            NO SIGNAL
+          </div>
+          <div class="camtag" id="camtag" hidden><span class="led"></span><span id="camtag-text">REC</span></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- center: reactor -->
+    <div class="col">
+      <section class="panel core">
+        <div class="reactor">
+          <canvas id="reactor"></canvas>
+          <div class="readout">
+            <div class="mode" id="core-mode">STANDBY</div>
+            <div class="val" id="core-model">GEMINI</div>
+            <div class="sub" id="core-sub">CORE LOAD 12% &middot; 41ms</div>
+          </div>
+        </div>
+        <div class="corelegend">
+          <span>CTX <b id="lg-ctx">4.1k</b></span>
+          <span>TOK/S <b id="lg-tok">0</b></span>
+          <span>VRAM <b id="lg-vram">2.4GB</b></span>
+          <span>UPTIME <b id="lg-up">00:00:00</b></span>
+        </div>
+      </section>
+
+      <section class="panel airkb" id="airkb" data-on="0">
+        <div class="panel-head"><span class="label">Air Keyboard &middot; Pinch to Commit</span><span class="label" id="kb-buf">BUF 0</span></div>
+        <div class="kbrow" data-keys="QWERTYUIOP"></div>
+        <div class="kbrow" data-keys="ASDFGHJKL"></div>
+        <div class="kbrow" data-keys="ZXCVBNM"></div>
+      </section>
+    </div>
+
+    <!-- right: console -->
+    <div class="col">
+      <section class="panel console">
+        <div class="panel-head">
+          <div class="chattabs" role="tablist" aria-label="Console view">
+            <button type="button" class="chattab active" id="tab-chat" role="tab" aria-selected="true" aria-controls="chatwrap">CHAT</button>
+            <button type="button" class="chattab" id="tab-log" role="tab" aria-selected="false" aria-controls="term">LOG</button>
+          </div>
+          <span class="label" id="log-count">0 LINES</span>
+        </div>
+        <div class="chatwrap" id="chatwrap" role="tabpanel" aria-labelledby="tab-chat">
+          <div class="chatfeed" id="chatfeed" aria-live="polite" aria-label="Conversation">
+            <div class="chatempty" id="chatempty">Say something below, or arm the Gesture Matrix and close a fist on EXECUTE.</div>
+          </div>
+        </div>
+        <div class="term" id="term" role="log" aria-live="polite" aria-label="System log" hidden></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ TELEMETRY ============ -->
+  <div class="telemetry">
+    <div class="tcell" id="t-status" style="--tc:#39ff9e"><span class="k">STATUS</span><span class="v">ONLINE</span></div>
+    <div class="tcell" id="t-pos" style="--tc:#00f0ff"><span class="k">POS</span><span class="v">X 0960 &middot; Y 0540</span></div>
+    <div class="tcell" id="t-gesture" style="--tc:#a05cff"><span class="k">GESTURE</span><span class="v">NONE</span></div>
+    <div class="tcell" id="t-action" style="--tc:#ffb020"><span class="k">ACTION</span><span class="v">IDLE</span></div>
+  </div>
+
+  <!-- ============ PROMPT ============ -->
+  <form class="panel prompt" id="promptform" autocomplete="off">
+    <span class="chev">&gt;_</span>
+    <input id="promptin" placeholder="ENTER DIRECTIVE FOR ACTIVE MODEL&hellip;" aria-label="Prompt for active model">
+    <button class="exec" type="submit">EXECUTE</button>
+  </form>
+
+  <div class="foot">
+    <span>HYBRID AGENT &middot; A.D.A SHELL &middot; LOCAL RUNTIME</span>
+    <span>GESTURES READ FROM YOUR CAMERA VIA MEDIAPIPE &middot; MODEL RESPONSES ARE SIMULATED</span>
+  </div>
+</div>
+
+
+<!-- ============ OPERATOR ACCESS ============ -->
+<div class="sheet" id="auth" hidden>
+  <div class="panel sheet-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <button type="button" class="sheet-x" id="auth-close" aria-label="Close sign in">ESC</button>
+
+    <div>
+      <div class="label">Operator Access</div>
+      <h2 id="auth-title">Sign in to A.D.A</h2>
+    </div>
+    <p class="sheet-note">Sign in to use your own Gemini, Claude or added model &mdash; each key is yours alone. Prefer not to? Close this (ESC) and keep going with Local Ollama, which needs no account and no key.</p>
+
+    <div id="auth-signedout">
+      <form class="localform" id="localform">
+        <input id="auth-user" placeholder="username" maxlength="20" aria-label="Username" autocomplete="username">
+        <input id="auth-pass" type="password" placeholder="password" aria-label="Password" autocomplete="current-password">
+        <button class="exec" type="submit" id="auth-go">SIGN IN</button>
+      </form>
+      <p class="sheet-err" id="auth-err" hidden></p>
+      <button type="button" class="linky auth-switch" id="auth-toggle">New here? Create an account instead</button>
+      <p class="sheet-fine">Your password is hashed before it is stored — never written as plain text. Signing in scopes your Gemini, Claude and any custom keys to this account alone; this console never answers a visitor with someone else's key. No account yet? Use the link above to create one — it takes ten seconds.</p>
+    </div>
+
+    <div id="auth-signedin" hidden>
+      <div class="authstate">
+        <div>
+          <div class="who" id="who">GUEST</div>
+          <div class="sub" id="who-sub">bridge session</div>
+        </div>
+        <button type="button" class="signout" id="signout">SIGN OUT</button>
+      </div>
+      <p class="sheet-fine">Your Gemini, Claude and custom keys are scoped to this account and stored only on this machine. Sign out and the console falls back to Ollama only for the next visitor.</p>
+    </div>
+  </div>
+</div>
+
+<div class="vcursor" id="vcursor" aria-hidden="true">
+  <span class="ring"></span><span class="dot"></span><span class="tip" id="vctip">TRACK</span>
+</div>
+
+<div class="sheet" id="applauncher" hidden>
+  <div class="panel sheet-card" role="dialog" aria-modal="true" aria-labelledby="app-title">
+    <button type="button" class="sheet-x" id="app-close" aria-label="Close launcher">ESC</button>
+    <div>
+      <div class="label">Launcher</div>
+      <h2 id="app-title">Open an app</h2>
+    </div>
+    <p class="sheet-note">Everything opens as an https web app. WhatsApp is the exception: it opens the desktop client through <code>whatsapp://</code> and only falls back to the web if the client is not installed. Sign in to add your own shortcuts &mdash; they show up first, above the built-ins.</p>
+    <div class="bridge" id="bridge"><span class="led"></span><span id="bridge-text">CHECKING LOCAL BRIDGE</span></div>
+    <input type="search" id="app-search" class="appsearch" placeholder="Search apps&hellip;" aria-label="Search apps" autocomplete="off">
+    <div id="appbody"></div>
+    <button type="button" class="use addapp" id="app-add-open" hidden>+ ADD APP</button>
+    <form class="keyform llm-add-form" id="app-add" hidden>
+      <input id="app-label" placeholder="name, e.g. Figma" autocomplete="off" spellcheck="false">
+      <input id="app-url" placeholder="https://figma.com" autocomplete="off" spellcheck="false">
+      <button type="submit">ADD APP</button>
+    </form>
+    <p class="sheet-fine">Desktop and system apps need the local bridge: run <code>python serve.py</code> and open the console from it. Without the bridge, web apps still open in a new tab. Added apps are yours alone &mdash; signed out, or on someone else's session, they are not there.</p>
+  </div>
+</div>
+
+
+<div class="sheet" id="keysheet" hidden>
+  <div class="panel sheet-card" role="dialog" aria-modal="true" aria-labelledby="key-title">
+    <button type="button" class="sheet-x" id="key-close" aria-label="Close keys">ESC</button>
+    <div>
+      <div class="label">Model channels</div>
+      <h2 id="key-title">Which model answers?</h2>
+    </div>
+    <p class="sheet-note">Pick the channel this console talks to and give it an API key. Signing in scopes every key to your account alone &mdash; nobody else who opens this console can use it. Keys are written to <code>config.json</code> on this machine and are sent only to that provider.</p>
+    <div class="bridge" id="keybridge"><span class="led"></span><span id="keybridge-text">CHECKING LOCAL BRIDGE</span></div>
+    <div id="keybody"></div>
+    <form class="keyform llm-add-form" id="llm-add" hidden>
+      <input id="llm-label" placeholder="name, e.g. Mistral" autocomplete="off" spellcheck="false">
+      <input id="llm-url" placeholder="base URL, e.g. https://api.mistral.ai/v1" autocomplete="off" spellcheck="false">
+      <input id="llm-model" placeholder="model name, e.g. mistral-large-latest" autocomplete="off" spellcheck="false">
+      <input id="llm-key" type="password" placeholder="API key (blank if none)" autocomplete="off">
+      <button type="submit">ADD MODEL</button>
+    </form>
+    <p class="sheet-fine">No bridge, no keys: the console answers from its built-in sample replies and says so. Ollama needs no key &mdash; just <code>ollama serve</code>. <b>ADD LLM</b> connects any OpenAI-chat-completions-compatible endpoint &mdash; Mistral, Groq, OpenRouter, DeepSeek, a local llama.cpp server. You can also run <code>python configure.py --add-llm</code> in the terminal.</p>
+  </div>
+</div>
+
+
+
+<div class="sheet" id="btsheet" hidden>
+  <div class="panel sheet-card" role="dialog" aria-modal="true" aria-labelledby="bt-title">
+    <button type="button" class="sheet-x" id="bt-close" aria-label="Close Bluetooth">ESC</button>
+    <div>
+      <div class="label">Bluetooth</div>
+      <h2 id="bt-title">Paired devices</h2>
+    </div>
+    <p class="sheet-note">Windows reports the radio and every device already paired with this machine. Connecting asks the operating system to bring the link up &mdash; a device that is switched off or out of range cannot be reached, and this panel says so rather than pretending.</p>
+    <div class="bridge" id="btbridge"><span class="led"></span><span id="btbridge-text">CHECKING LOCAL BRIDGE</span></div>
+    <div class="btradio" id="btradio" hidden>
+      <span class="nm">Radio</span>
+      <span class="st" id="btradio-state">&mdash;</span>
+      <button type="button" class="btn ghost" id="btradio-toggle">TURN OFF</button>
+    </div>
+    <div id="btbody"></div>
+    <p class="sheet-fine">Pairing a new device needs the Windows dialog, because it asks you to confirm a PIN &mdash; <button type="button" class="linky" id="bt-pane">open Bluetooth settings</button>. In the terminal: <code>python bluetooth.py</code>.</p>
+  </div>
+</div>
+
+
+<div class="sheet" id="devsheet" hidden>
+  <div class="panel sheet-card" role="dialog" aria-modal="true" aria-labelledby="dev-title">
+    <button type="button" class="sheet-x" id="dev-close" aria-label="Close devices">ESC</button>
+    <div>
+      <div class="label">Hardware</div>
+      <h2 id="dev-title">Boards, mini computers and phones</h2>
+    </div>
+    <p class="sheet-note">Microcontrollers over USB serial, anything on the network you have saved, and Android phones through <code>adb</code>. Each row shows whether it answers right now &mdash; not whether it was ever plugged in.</p>
+    <div class="bridge" id="devbridge"><span class="led"></span><span id="devbridge-text">CHECKING LOCAL BRIDGE</span></div>
+    <div class="devtools" id="devtools" hidden></div>
+    <div id="devbody"></div>
+    <form class="keyform" id="devadd" hidden>
+      <input type="text" id="devadd-key" placeholder="name, e.g. pi" autocomplete="off" spellcheck="false">
+      <input type="text" id="devadd-host" placeholder="192.168.0.21 or raspberrypi.local" autocomplete="off" spellcheck="false">
+      <button type="submit">SAVE HOST</button>
+    </form>
+    <p class="sheet-fine">Serial needs <code>pip install pyserial</code>. Phones need USB debugging, or wireless debugging plus <code>adb connect &lt;ip&gt;</code>. SSH is printed for you to run yourself &mdash; it asks for a password, and this console never handles one.</p>
+  </div>
+</div>
+
+<script src="js/console.js"></script>
+</body>
+</html>
+

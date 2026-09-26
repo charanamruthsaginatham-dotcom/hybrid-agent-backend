@@ -1,0 +1,46 @@
+/* HYBRID AGENT - shared design tokens and primitives
+   Every page on the site draws its colour, type and rhythm from this file. */
+
+:root{
+  --void:#05070a;
+  --plate:#090e15;
+  --plate-2:#0c131c;
+  --edge:rgba(0,240,255,.14);
+  --edge-soft:rgba(120,160,190,.12);
+  --cyan:#00f0ff;
+  --violet:#a05cff;
+  --violet-deep:#7000ff;
+  --green:#39ff9e;
+  --amber:#ffb020;
+  --red:#ff3b5c;
+  --ink:#d7e9f2;
+  --ink-dim:#8ea6b8;
+  --ink-mute:#5d7488;
+  --accent:#00f0ff;
+  --accent-rgb:0,240,255;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  --ui:"Chakra Petch","Segoe UI",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--void);
+  color:var(--ink);
+  font-family:var(--ui);
+  font-size:14px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* shared eyebrow / caps label */
+.label{
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--ink-mute);
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
