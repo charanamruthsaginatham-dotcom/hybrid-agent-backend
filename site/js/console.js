@@ -4,10 +4,15 @@
 var $ = function(s){ return document.querySelector(s); };
 var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-var BASE_API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://' + window.location.hostname + ':8790'
-  : 'https://hybrid-agent-backend-xxxxx.onrender.com';
-var api = function(path){ return BASE_API_URL + path; };
+var BASE_API_URL = localStorage.getItem('backend_url') || (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://' + window.location.hostname + ':8790'
+    : null
+);
+var api = function(path){
+  if (!BASE_API_URL) throw new Error('Backend URL not configured. Set it with: localStorage.setItem("backend_url", "https://your-backend-url")');
+  return BASE_API_URL + path;
+};
 
 /* ---------------- model registry ---------------- */
 var MODELS = {
