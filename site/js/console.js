@@ -4,6 +4,11 @@
 var $ = function(s){ return document.querySelector(s); };
 var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+var BASE_API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://' + window.location.hostname + ':8790'
+  : 'https://hybrid-agent-backend-xxxxx.onrender.com';
+var api = function(path){ return BASE_API_URL + path; };
+
 /* ---------------- model registry ---------------- */
 var MODELS = {
   gemini:{ label:"Google Gemini", short:"GEMINI", build:"gemini-2.5-pro", accent:"#00f0ff", rgb:"0,240,255",
@@ -804,7 +809,7 @@ function authApplied(name){
   keyLoad();
 }
 function authMe(){
-  return fetch("/api/auth/me", { cache:"no-store" })
+  return fetch(api("/api/auth/me"), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){ AUTH.user = d.user || null; })
     .catch(function(){ AUTH.user = null; })
@@ -817,7 +822,7 @@ function authMe(){
     });
 }
 function signOut(){
-  fetch("/api/auth/logout", { method:"POST" })
+  fetch(api("/api/auth/logout"), { method:"POST" })
     .then(function(){ authApplied(null); })
     .catch(function(){ authApplied(null); });
 }
@@ -918,7 +923,7 @@ function findApp(q){
 
 function checkBridge(){
   var el = $("#bridge"), txt = $("#bridge-text");
-  return fetch("/api/apps", { cache:"no-store" })
+  return fetch(api("/api/apps"), { cache:"no-store" })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error("http " + r.status)); })
     .then(function(d){
       BRIDGE.up = !!(d && d.ok); BRIDGE.checked = true;
@@ -988,7 +993,7 @@ function launchApp(key){
   setAction("LAUNCH");
   log("Launching " + app.label + "\u2026", "sys", "[APP]");
 
-  fetch("/api/open?app=" + encodeURIComponent(app.key), { cache:"no-store" })
+  fetch(api("/api/open?app=" + encodeURIComponent(app.key), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(!d.ok) throw new Error(d.error || "refused");
@@ -1058,7 +1063,7 @@ function renderApps(){
 }
 
 function appAdd(label, url){
-  return fetch("/api/apps/add", {
+  return fetch(api("/api/apps/add"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ label:label, url:url })
   })
@@ -1079,7 +1084,7 @@ function appAdd(label, url){
 }
 
 function appRemove(id, label){
-  return fetch("/api/apps/remove", {
+  return fetch(api("/api/apps/remove"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ id:id })
   })
@@ -1284,7 +1289,7 @@ function syncCustomModels(rows){
 }
 
 function keyLoad(){
-  return fetch("/api/models", { cache:"no-store" })
+  return fetch(api("/api/models"), { cache:"no-store" })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error("no bridge")); })
     .then(function(d){
       CH.rows = d.channels || []; CH.bridge = true; CH.user = d.user || null;
@@ -1315,7 +1320,7 @@ function keyLoad(){
 /* the key goes straight to the local bridge, scoped to whoever is signed in;
    it is never logged to the console */
 function keySave(channel, key, model, makeDefault){
-  return fetch("/api/key", {
+  return fetch(api("/api/key"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ channel:channel, key:key, model:model, make_default:!!makeDefault })
   })
@@ -1341,7 +1346,7 @@ function keySave(channel, key, model, makeDefault){
 
 /* ---------------- add a custom LLM ---------------- */
 function llmAdd(label, baseUrl, key, model){
-  return fetch("/api/llm/add", {
+  return fetch(api("/api/llm/add"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ label:label, base_url:baseUrl, key:key, model:model })
   })
@@ -1362,7 +1367,7 @@ function llmAdd(label, baseUrl, key, model){
 }
 
 function llmRemove(id, label){
-  return fetch("/api/llm/remove", {
+  return fetch(api("/api/llm/remove"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ id:id })
   })
@@ -1503,7 +1508,7 @@ function dispatch(text, fromVoice){
   }
 
   /* real model first: the bridge holds the key, so it never touches this page */
-  fetch("/api/chat", {
+  fetch(api("/api/chat"), {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ prompt:text, channel:S.model })
   })
@@ -1712,7 +1717,7 @@ function btWhy(text){
 }
 
 function btLoad(quiet){
-  return fetch("/api/bt", { cache:"no-store" })
+  return fetch(api("/api/bt"), { cache:"no-store" })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error("no bridge")); })
     .then(function(d){
       BT.bridge = true;
@@ -1747,7 +1752,7 @@ function btAct(dev, verb){
   BT.busy = dev.key; btWhy(""); btRender();
   log(verb === "connect" ? "Connecting \u2192 " + dev.name : "Dropping \u2192 " + dev.name, "sys", "[BT ]");
 
-  return fetch("/api/bt/" + verb + "?dev=" + encodeURIComponent(dev.key), { cache:"no-store" })
+  return fetch(api("/api/bt/" + verb + "?dev=" + encodeURIComponent(dev.key), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       BT.busy = "";
@@ -1769,7 +1774,7 @@ function btAct(dev, verb){
 function btRadio(on){
   if(BT.busy) return;
   BT.busy = "radio"; btWhy(""); btRender();
-  return fetch("/api/bt/radio?state=" + (on ? "on" : "off"), { cache:"no-store" })
+  return fetch(api("/api/bt/radio?state=" + (on ? "on" : "off"), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       BT.busy = "";
@@ -1821,7 +1826,7 @@ $("#btradio-toggle").addEventListener("click", function(){
   btRadio(!(BT.radio && BT.radio.on));
 });
 $("#bt-pane").addEventListener("click", function(){
-  fetch("/api/bt/pane", { cache:"no-store" })
+  fetch(api("/api/bt/pane"), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){ log(d.ok ? "Opened Windows Bluetooth settings" : (d.error || "could not open settings"),
                            d.ok ? "ok" : "warn", "[BT ]"); })
@@ -1942,7 +1947,7 @@ function devRender(){
 }
 
 function devLoad(quiet){
-  return fetch("/api/dev", { cache:"no-store" })
+  return fetch(api("/api/dev"), { cache:"no-store" })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error("no bridge")); })
     .then(function(d){
       DEV.bridge = true;
@@ -1984,7 +1989,7 @@ function devBusy(key, fn){
 function devSend(d, line){
   return devBusy(d.key, function(){
     log("Serial \u2192 " + d.port + (line ? " \u00b7 " + line : " \u00b7 open"), "sys", "[DEV]");
-    return fetch("/api/dev/send?port=" + encodeURIComponent(d.port)
+    return fetch(api("/api/dev/send?port=" + encodeURIComponent(d.port)
                  + "&line=" + encodeURIComponent(line), { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){
@@ -1998,7 +2003,7 @@ function devSend(d, line){
 }
 
 function devSsh(d){
-  return fetch("/api/dev/ssh?key=" + encodeURIComponent(d.key), { cache:"no-store" })
+  return fetch(api("/api/dev/ssh?key=" + encodeURIComponent(d.key), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(res){
       if(!res.ok){ log(res.error || "no such device", "warn", "[DEV]"); return; }
@@ -2010,7 +2015,7 @@ function devSsh(d){
 
 function devForget(d){
   return devBusy(d.key, function(){
-    return fetch("/api/dev/forget?key=" + encodeURIComponent(d.key), { cache:"no-store" })
+    return fetch(api("/api/dev/forget?key=" + encodeURIComponent(d.key), { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){ log(res.ok ? "Forgot " + d.name : "Nothing to forget",
                                res.ok ? "ok" : "warn", "[DEV]"); });
@@ -2019,7 +2024,7 @@ function devForget(d){
 
 function devPhone(verb, target){
   return devBusy("phone", function(){
-    return fetch("/api/dev/phone?do=" + verb + "&target=" + encodeURIComponent(target || ""),
+    return fetch(api("/api/dev/phone?do=" + verb + "&target=" + encodeURIComponent(target || ""),
                  { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){ log(res.ok ? (res.note || verb + " ok")
@@ -2065,7 +2070,7 @@ function devCommand(rest){
 }
 
 function devAdd(key, host){
-  return fetch("/api/dev/add?key=" + encodeURIComponent(key)
+  return fetch(api("/api/dev/add?key=" + encodeURIComponent(key)
                + "&host=" + encodeURIComponent(host), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(res){
