@@ -111,7 +111,12 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         origin = self.headers.get("Origin")
         if origin is None:                      # same-origin fetch, or curl
             return True
-        return urlparse(origin).hostname in {"localhost", "127.0.0.1"}
+        hostname = urlparse(origin).hostname
+        if hostname in {"localhost", "127.0.0.1"}:
+            return True
+        if os.environ.get("RENDER"):  # Running on Render cloud
+            return True
+        return False
 
     def _token(self) -> str:
         raw = self.headers.get("Cookie", "")
@@ -404,7 +409,8 @@ def main() -> int:
         allow_reuse_address = True
         daemon_threads = True
 
-    with Server(("127.0.0.1", port), handler) as httpd:
+    bind_host = "0.0.0.0" if os.environ.get("RENDER") else "127.0.0.1"
+    with Server((bind_host, port), handler) as httpd:
         url = f"http://localhost:{port}/index.html"
         print(f"HYBRID AGENT serving {root}")
         print(f"  {url}")
