@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: hybrid-agent-site
+    runtime: python
+    plan: free
+    buildCommand: python --version
+    startCommand: python serve.py --port $PORT --no-open
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
