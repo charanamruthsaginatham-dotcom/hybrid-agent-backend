@@ -154,14 +154,12 @@ body.landing::before {
 }
 
 .brand-name {
-  font: 700 14px/1 var(--mono);
-  letter-spacing: 0.05em;
+  font: 700 18px/1 var(--display);
+  letter-spacing: -0.03em;
 }
 
 .brand-name span {
-  margin-left: 4px;
-  color: var(--muted);
-  font-weight: 400;
+  color: var(--lime-deep);
 }
 
 .nav-menu {
