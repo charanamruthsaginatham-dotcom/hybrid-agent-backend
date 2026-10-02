@@ -119,7 +119,8 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         if origin is None:                      # same-origin fetch, or curl
             return True
         hostname = urlparse(origin).hostname
-        if hostname in {"localhost", "127.0.0.1"}:
+        # *.localhost always resolves to this machine, so e.g. hybrid.localhost is local too
+        if hostname in {"localhost", "127.0.0.1"} or (hostname or "").endswith(".localhost"):
             return True
         if os.environ.get("RENDER"):  # Running on Render cloud
             return True
@@ -472,6 +473,7 @@ def main() -> int:
         url = f"http://localhost:{port}/index.html"
         print(f"HYBRID AGENT serving {root}")
         print(f"  {url}")
+        print(f"  http://hybrid.localhost:{port}/")
         print(f"  {url.replace('index.html', 'console.html')}")
         print("ctrl-c to stop")
 
