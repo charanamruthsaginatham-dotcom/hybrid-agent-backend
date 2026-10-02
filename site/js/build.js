@@ -118,6 +118,7 @@ function render(entry){
 
 function addMsg(entry){
   $("#empty").hidden = true;
+  $(".startchips").hidden = true;
   var el = render(entry);
   el.dataset.id = entry.id;
   feed.insertBefore(el, $("#thinking"));
@@ -142,6 +143,7 @@ function markVersions(){
 function renderFeed(){
   Array.prototype.slice.call(feed.querySelectorAll(".msg")).forEach(function(m){ m.remove(); });
   $("#empty").hidden = P.chat.length > 0;
+  $(".startchips").hidden = P.chat.length > 0;
   P.chat.forEach(addMsg);
 }
 function thinking(on){
@@ -162,7 +164,7 @@ function setMode(m){
   document.querySelectorAll(".mode").forEach(function(b){
     b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
   });
-  document.querySelectorAll("#empty [data-for]").forEach(function(d){ d.hidden = d.dataset.for !== mode; });
+  document.querySelectorAll("[data-for]").forEach(function(d){ d.hidden = d.dataset.for !== mode; });
   try{ localStorage.setItem("hybrid-builder-mode", mode); }catch(e){}
   labels();
 }

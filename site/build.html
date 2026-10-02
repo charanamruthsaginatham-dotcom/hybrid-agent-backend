@@ -33,23 +33,14 @@
       <div class="feed" id="feed" aria-live="polite">
         <div class="empty" id="empty">
           <div data-for="build">
-            <h1>What do you want to build?</h1>
-            <p>Describe an app below. Then keep talking to change it: &ldquo;make it light&rdquo;, &ldquo;make it purple&rdquo;, &ldquo;call it Focus&rdquo;.</p>
-            <div class="chips">
-              <button type="button" data-prompt="A pomodoro timer with a circular progress ring, sound on finish and a session counter">Pomodoro timer</button>
-              <button type="button" data-prompt="An expense tracker: add expenses with a category, see totals and a pie chart by category">Expense tracker</button>
-              <button type="button" data-prompt="A playable snake game with arrow keys and swipe controls, score and high score">Snake game</button>
-            </div>
+            <div class="eyebrow"><span class="dot"></span>App builder &middot; works offline &middot; AI optional</div>
+            <h1>What do you want to <em>build?</em></h1>
+            <p>Describe an app and hybrid.agent builds it live. Then keep talking to change it: &ldquo;make it light&rdquo;, &ldquo;make it purple&rdquo;, &ldquo;call it Focus&rdquo;.</p>
           </div>
           <div data-for="agent" hidden>
-            <h1>What should Nexus do?</h1>
+            <div class="eyebrow"><span class="dot"></span>Nexus agent &middot; runs on this PC &middot; asks before acting</div>
+            <h1>What should <em>Nexus</em> do?</h1>
             <p id="agent-note">Nexus works on this PC: system health, files, documents, code, git, apps, WhatsApp and more. Anything that changes your PC waits for your approval.</p>
-            <div class="chips">
-              <button type="button" data-prompt="How is my PC doing? Check the vitals and what is using the most memory.">Check my PC</button>
-              <button type="button" data-prompt="Make a 5-slide PowerPoint introducing hybrid.agent and what it can do.">Make a slide deck</button>
-              <button type="button" data-prompt="Look at the git status and last 5 commits of the Hybrid Agent folder and summarise them.">Summarise my repo</button>
-              <button type="button" data-prompt="Tidy up my Desktop.">Tidy my Desktop</button>
-            </div>
           </div>
         </div>
       </div>
@@ -58,12 +49,28 @@
         <textarea id="prompt" rows="3" placeholder="Describe your app&hellip;"></textarea>
         <div class="composer-bar">
           <div class="modes" role="group" aria-label="Mode">
-            <button type="button" class="mode" data-mode="build" aria-pressed="true" title="Generate a web app">Build</button>
-            <button type="button" class="mode" data-mode="agent" aria-pressed="false" title="Nexus acts on this PC">Agent</button>
+            <button type="button" class="mode" data-mode="build" aria-pressed="true" title="Generate a web app"><span class="short">Build</span><span class="long">Build an app</span></button>
+            <button type="button" class="mode" data-mode="agent" aria-pressed="false" title="Nexus acts on this PC"><span class="short">Agent</span><span class="long">Ask Nexus to do it</span></button>
           </div>
           <button type="submit" class="send" id="send">Build &rarr;</button>
         </div>
       </form>
+      <div class="startchips">
+        <div class="chips" data-for="build">
+          <button type="button" data-prompt="A pomodoro timer with a circular progress ring, sound on finish and a session counter">Pomodoro timer</button>
+          <button type="button" data-prompt="An expense tracker: add expenses with a category, see totals and a pie chart by category">Expense tracker</button>
+          <button type="button" data-prompt="A playable snake game with arrow keys and swipe controls, score and high score">Snake game</button>
+          <button type="button" data-prompt="A landing page for a small neighbourhood coffee shop with menu, hours and a map section">Coffee shop site</button>
+          <button type="button" data-prompt="A markdown notes app with a list of notes, live preview and search">Markdown notes</button>
+        </div>
+        <div class="chips" data-for="agent" hidden>
+          <button type="button" data-prompt="How is my PC doing? Check the vitals and what is using the most memory.">Check my PC</button>
+          <button type="button" data-prompt="Make a 5-slide PowerPoint introducing hybrid.agent and what it can do.">Make a slide deck</button>
+          <button type="button" data-prompt="Look at the git status and last 5 commits of the Hybrid Agent folder and summarise them.">Summarise my repo</button>
+          <button type="button" data-prompt="Tidy up my Desktop.">Tidy my Desktop</button>
+          <button type="button" data-prompt="help">What can you do?</button>
+        </div>
+      </div>
     </section>
 
     <section class="work" id="work" aria-label="Workspace">
