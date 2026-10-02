@@ -406,7 +406,7 @@
   .hud{height:auto;min-height:100vh;overflow:visible}
   /* stacked: panels size to content, the log gets a fixed viewport slice */
   .core,.console{flex:0 0 auto}
-  .term,.chatwrap{flex:0 0 auto;height:46vh;min-height:240px;max-height:none}
+  .console .term,.console .chatwrap{flex:0 0 auto;height:46vh;min-height:240px;max-height:none}
   .camwrap{aspect-ratio:16/10;max-height:none}
   .core{min-height:320px}
   .reactor{width:min(100%,460px)}

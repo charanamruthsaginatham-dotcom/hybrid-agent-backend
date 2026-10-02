@@ -188,7 +188,12 @@ function showVersion(i){
   run(P.versions[i]);
   $("#download").disabled = false;
   $("#run").hidden = true;
-  markVersions(); labels(); save();
+  markVersions(); labels(); save(); layout();
+}
+
+/* bolt-style: just the prompt until there is an app to show */
+function layout(){
+  document.body.classList.toggle("fresh", P.current < 0 && $("#working").hidden);
 }
 
 function setTab(which){
@@ -241,7 +246,7 @@ function reset(){
   save(); renderFeed(); code.value = ""; run("");
   $("#project-name").textContent = P.name;
   $("#download").disabled = true;
-  labels();
+  labels(); layout();
 }
 $("#new-project").addEventListener("click", function(){
   if(busy) return;
@@ -340,6 +345,7 @@ function working(on, label){
   busy = on;
   $("#send").disabled = on;
   $("#working").hidden = !on;
+  layout();
   clearInterval(timer);
   if(on){
     var t0 = Date.now(), steps = [label, "Laying out the interface…", "Wiring up the logic…", "Polishing the details…"];
@@ -545,6 +551,7 @@ setMode(startMode || "build");
 $("#project-name").textContent = P.name;
 renderFeed();
 if(P.current >= 0) showVersion(P.current);
+layout();
 
 var incoming = params.get("prompt");
 Promise.all([loadModels(), loadTools()]).then(function(){
