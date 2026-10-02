@@ -33,7 +33,10 @@ import apps
 import auth
 import bluetooth
 import boards
+import nexus_tools
 import providers
+
+providers.MODES["agent"] = (nexus_tools.system_prompt(), *providers.MODES["agent"][1:])
 
 def _find_site() -> Path:
     """site/ may sit beside this script or one level up, depending on layout."""
@@ -64,6 +67,10 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         POST /api/auth/register, /api/auth/login, /api/auth/logout
         POST /api/llm/add, /api/llm/remove  -> this account's custom models
         POST /api/apps/add, /api/apps/remove -> this account's custom apps
+        POST /api/agent        -> one Nexus agent step: a tool request or a final answer
+        POST /api/agent/tool   -> run one Nexus tool (local server only)
+        GET  /api/agent/tools  -> the Nexus tools this server offers
+        GET  /api/agent/file?name=X -> download a file the agent made
 
     The API only accepts a key from apps.APPS: no path, URL or command from the
     caller ever reaches the shell. It binds to 127.0.0.1 and refuses requests
@@ -157,6 +164,24 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
         if parsed.path.startswith("/api/dev"):
             return self._devices(parsed)
+
+        if parsed.path == "/api/agent/tools":
+            return self._json({"ok": True, "local": nexus_tools.local_mode(),
+                               "tools": nexus_tools.describe()})
+
+        if parsed.path == "/api/agent/file":
+            name = (parse_qs(parsed.query).get("name") or [""])[0]
+            path = nexus_tools.output_file(name)
+            if not path:
+                return self._json({"ok": False, "error": "no such file"}, 404)
+            data = path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return None
 
         if parsed.path == "/api/models":
             user = self._user()
@@ -351,6 +376,38 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
             ok = apps.remove_custom(user, str(body.get("id", "")))
             return self._json({"ok": ok}, 200 if ok else 404)
 
+        if parsed.path == "/api/agent":
+            messages = body.get("messages")
+            if not isinstance(messages, list) or not messages:
+                return self._json({"ok": False, "error": "no messages"}, 400)
+            user = self._user()
+            out = providers.ask(nexus_tools.transcript(messages), str(body.get("channel", "")),
+                                str(body.get("model", "")), user=user, mode="agent")
+            if not out.get("ok"):
+                return self._json(out, 502)
+            call = nexus_tools.parse_call(out["text"])
+            tool = nexus_tools.available().get(call["tool"]) if call else None
+            if call:
+                print(f"  agent   wants {call['tool']} {json.dumps(call['args'])[:80]}")
+            return self._json({
+                "ok": True, "model": out.get("model"), "text": out["text"],
+                "type": "tool" if call else "final",
+                "tool": call["tool"] if call else None,
+                "args": call["args"] if call else None,
+                "risk": tool.risk if tool else "auto",
+                "summary": tool.summary if tool else "",
+            })
+
+        if parsed.path == "/api/agent/tool":
+            if "application/json" not in (self.headers.get("Content-Type") or ""):
+                return self._json({"ok": False, "error": "json only"}, 415)
+            if not nexus_tools.local_mode():
+                return self._json({"ok": False, "error": "PC tools only run on the local version"}, 403)
+            name = str(body.get("tool", ""))
+            args = body.get("args") if isinstance(body.get("args"), dict) else {}
+            print(f"  tool    {name} {json.dumps(args)[:80]}")
+            return self._json(nexus_tools.run(name, args, self._user()))
+
         if parsed.path == "/api/chat":
             prompt = str(body.get("prompt", "")).strip()
             if not prompt:
@@ -358,9 +415,10 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
             user = self._user()
             channel = str(body.get("channel", ""))
             model = str(body.get("model", ""))
-            print(f"  chat    {channel or providers.default_channel(user):<12} "
+            mode = str(body.get("mode", "chat"))
+            print(f"  {mode:<7} {channel or providers.default_channel(user):<12} "
                   f"{'(' + user + ')' if user else '(guest)':<10} {prompt[:50]}")
-            out = providers.ask(prompt, channel, model, user=user)
+            out = providers.ask(prompt, channel, model, user=user, mode=mode)
             if not out.get("ok"):
                 print(f"          -> {out.get('error')}")
             return self._json(out, 200 if out.get("ok") else 502)

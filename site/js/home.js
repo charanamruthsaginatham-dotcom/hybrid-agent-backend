@@ -232,3 +232,22 @@
   var year = document.getElementById("year");
   if (year) year.textContent = String(new Date().getFullYear());
 })();
+
+/* Builder prompt: Enter submits, example chips fill the box and go */
+(function () {
+  var form = document.getElementById("hero-build");
+  if (!form) return;
+  var box = document.getElementById("hero-prompt");
+  box.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      if (box.value.trim()) form.requestSubmit();
+    }
+  });
+  document.querySelectorAll(".build-chips button").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      box.value = chip.dataset.prompt;
+      form.requestSubmit();
+    });
+  });
+})();

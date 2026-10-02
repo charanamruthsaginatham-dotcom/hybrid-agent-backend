@@ -4,15 +4,11 @@
 var $ = function(s){ return document.querySelector(s); };
 var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-var BASE_API_URL = localStorage.getItem('backend_url') || (
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://' + window.location.hostname + ':8790'
-    : null
-);
-var api = function(path){
-  if (!BASE_API_URL) throw new Error('Backend URL not configured. Set it with: localStorage.setItem("backend_url", "https://your-backend-url")');
-  return BASE_API_URL + path;
-};
+/* serve.py hosts both the pages and the API, so same-origin is the default;
+   localStorage "backend_url" points a separately hosted copy at a remote backend */
+var BASE_API_URL = "";
+try{ BASE_API_URL = (localStorage.getItem("backend_url") || "").replace(/\/+$/, ""); }catch(e){}
+var api = function(path){ return BASE_API_URL + path; };
 
 /* ---------------- model registry ---------------- */
 var MODELS = {
@@ -597,34 +593,61 @@ $("#btn-gesture").addEventListener("click", function(){
 });
 
 /* air keyboard */
-Array.prototype.forEach.call(document.querySelectorAll(".kbrow"), function(row){
+Array.prototype.forEach.call(document.querySelectorAll(".kbrow[data-keys]"), function(row){
   row.dataset.keys.split("").forEach(function(k){
     var d = document.createElement("div");
     d.className = "key"; d.textContent = k; d.dataset.k = k;
     row.appendChild(d);
   });
 });
-var kbTimer = null;
+var KB = { keys:Array.prototype.slice.call(document.querySelectorAll("#airkb .key")), aim:null };
+
+function kbAim(key){
+  if(KB.aim === key) return;
+  if(KB.aim) KB.aim.classList.remove("aim");
+  KB.aim = key;
+  if(key) key.classList.add("aim");
+}
+
+/* the key whose centre is closest to a screen point */
+function kbNearest(x, y){
+  var best = null, bestD = Infinity;
+  KB.keys.forEach(function(k){
+    var r = k.getBoundingClientRect();
+    if(!r.width) return;
+    var dx = r.left + r.width/2 - x, dy = r.top + r.height/2 - y, d = dx*dx + dy*dy;
+    if(d < bestD){ bestD = d; best = k; }
+  });
+  return best;
+}
+
+function kbType(key){
+  if(!key) return;
+  var input = $("#promptin"), k = key.dataset.k;
+  input.value = k === "DEL" ? input.value.slice(0, -1) : input.value + k.toLowerCase();
+  S.kbBuf = input.value;
+  $("#kb-buf").textContent = "BUF " + S.kbBuf.length;
+  key.classList.remove("hot"); void key.offsetWidth; key.classList.add("hot");
+  setTimeout(function(){ key.classList.remove("hot"); }, 220);
+  log("air key " + (k === " " ? "SPACE" : k) + " \u2192 \"" + input.value + "\"", "ok", "[KBD]");
+}
+
+KB.keys.forEach(function(k){
+  k.addEventListener("click", function(){ kbType(k); });
+});
+
 $("#btn-kb").addEventListener("click", function(){
   S.airkb = !S.airkb;
   toggleBtn($("#btn-kb"), S.airkb);
   $("#airkb").dataset.on = S.airkb ? "1" : "0";
-  clearInterval(kbTimer); kbTimer = null;
+  kbAim(null);
   if(S.airkb){
-    log("Air keyboard projected \u00b7 pinch-to-commit enabled", "ok");
+    log("Air keyboard projected \u00b7 move your hand to aim, close your fist to type", "ok");
     setAction("AIR_INPUT");
-    var keys = document.querySelectorAll(".key");
-    // kbTimer = setInterval(function(){
-    //   var k = keys[Math.floor(Math.random()*keys.length)];
-    //   k.classList.add("hot");
-    //   setTimeout(function(){ k.classList.remove("hot"); }, 190);
-    //   S.kbBuf = (S.kbBuf + k.dataset.k).slice(-18);
-    //   $("#kb-buf").textContent = "BUF " + S.kbBuf.length;
-    //   $("#promptin").value = S.kbBuf;
-    // }, 700);
+    if(!S.gesture) $("#btn-gesture").click();
   }else{
-    log("Air keyboard retracted \u00b7 buffer \"" + (S.kbBuf || "empty") + "\" discarded", "warn");
-    S.kbBuf = ""; $("#kb-buf").textContent = "BUF 0"; $("#promptin").value = "";
+    log("Air keyboard retracted", "warn");
+    S.kbBuf = ""; $("#kb-buf").textContent = "BUF 0";
     setAction(restAction());
   }
 });
@@ -697,7 +720,7 @@ function cursorShow(on){
   if(VC.on === on) return;
   VC.on = on;
   VC.el.classList.toggle("on", on);
-  if(!on){ cursorHot(null); VC.grip = false; VC.el.classList.remove("grip"); }
+  if(!on){ cursorHot(null); kbAim(null); VC.grip = false; VC.el.classList.remove("grip"); }
 }
 
 function cursorHot(el){
@@ -730,7 +753,11 @@ function cursorFrame(){
   var under = document.elementFromPoint(VC.x, VC.y);
   var target = under ? under.closest("button, input, a, [role=button]") : null;
   cursorHot(target);
-  VC.tip.textContent = target ? (controlName(target).slice(0, 22)) : (VC.grip ? "CLOSED" : "OPEN HAND");
+  var aim = S.airkb && !target ? kbNearest(VC.x, VC.y) : null;
+  kbAim(aim);
+  VC.tip.textContent = target ? (controlName(target).slice(0, 22))
+    : aim ? "KEY " + aim.textContent
+    : (VC.grip ? "CLOSED" : "OPEN HAND");
 }
 
 function controlName(el){
@@ -749,6 +776,10 @@ function cursorClick(){
   VC.el.classList.add("fire");
   var under = document.elementFromPoint(VC.x, VC.y);
   var target = under ? under.closest("button, input, a, [role=button]") : null;
+  if(!target && S.airkb){
+    kbType(kbNearest(VC.x, VC.y));
+    return;
+  }
   if(!target){
     log("fist at " + Math.round(VC.x) + "," + Math.round(VC.y) + " - nothing under the cursor", "warn", "[CUR]");
     return;
@@ -998,7 +1029,7 @@ function launchApp(key){
   setAction("LAUNCH");
   log("Launching " + app.label + "\u2026", "sys", "[APP]");
 
-  fetch(api("/api/open?app=" + encodeURIComponent(app.key), { cache:"no-store" })
+  fetch(api("/api/open?app=" + encodeURIComponent(app.key)), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(!d.ok) throw new Error(d.error || "refused");
@@ -1757,7 +1788,7 @@ function btAct(dev, verb){
   BT.busy = dev.key; btWhy(""); btRender();
   log(verb === "connect" ? "Connecting \u2192 " + dev.name : "Dropping \u2192 " + dev.name, "sys", "[BT ]");
 
-  return fetch(api("/api/bt/" + verb + "?dev=" + encodeURIComponent(dev.key), { cache:"no-store" })
+  return fetch(api("/api/bt/" + verb + "?dev=" + encodeURIComponent(dev.key)), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       BT.busy = "";
@@ -1779,7 +1810,7 @@ function btAct(dev, verb){
 function btRadio(on){
   if(BT.busy) return;
   BT.busy = "radio"; btWhy(""); btRender();
-  return fetch(api("/api/bt/radio?state=" + (on ? "on" : "off"), { cache:"no-store" })
+  return fetch(api("/api/bt/radio?state=" + (on ? "on" : "off")), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(d){
       BT.busy = "";
@@ -1995,7 +2026,7 @@ function devSend(d, line){
   return devBusy(d.key, function(){
     log("Serial \u2192 " + d.port + (line ? " \u00b7 " + line : " \u00b7 open"), "sys", "[DEV]");
     return fetch(api("/api/dev/send?port=" + encodeURIComponent(d.port)
-                 + "&line=" + encodeURIComponent(line), { cache:"no-store" })
+                 + "&line=" + encodeURIComponent(line)), { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){
         if(!res.ok){ log(res.error || "serial refused", "warn", "[DEV]"); return; }
@@ -2008,7 +2039,7 @@ function devSend(d, line){
 }
 
 function devSsh(d){
-  return fetch(api("/api/dev/ssh?key=" + encodeURIComponent(d.key), { cache:"no-store" })
+  return fetch(api("/api/dev/ssh?key=" + encodeURIComponent(d.key)), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(res){
       if(!res.ok){ log(res.error || "no such device", "warn", "[DEV]"); return; }
@@ -2020,7 +2051,7 @@ function devSsh(d){
 
 function devForget(d){
   return devBusy(d.key, function(){
-    return fetch(api("/api/dev/forget?key=" + encodeURIComponent(d.key), { cache:"no-store" })
+    return fetch(api("/api/dev/forget?key=" + encodeURIComponent(d.key)), { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){ log(res.ok ? "Forgot " + d.name : "Nothing to forget",
                                res.ok ? "ok" : "warn", "[DEV]"); });
@@ -2029,7 +2060,7 @@ function devForget(d){
 
 function devPhone(verb, target){
   return devBusy("phone", function(){
-    return fetch(api("/api/dev/phone?do=" + verb + "&target=" + encodeURIComponent(target || ""),
+    return fetch(api("/api/dev/phone?do=" + verb + "&target=" + encodeURIComponent(target || "")),
                  { cache:"no-store" })
       .then(function(r){ return r.json(); })
       .then(function(res){ log(res.ok ? (res.note || verb + " ok")
@@ -2076,7 +2107,7 @@ function devCommand(rest){
 
 function devAdd(key, host){
   return fetch(api("/api/dev/add?key=" + encodeURIComponent(key)
-               + "&host=" + encodeURIComponent(host), { cache:"no-store" })
+               + "&host=" + encodeURIComponent(host)), { cache:"no-store" })
     .then(function(r){ return r.json(); })
     .then(function(res){
       log(res.ok ? res.note : (res.error || "refused"), res.ok ? "ok" : "warn", "[DEV]");

@@ -37,6 +37,7 @@
       </button>
 
       <div class="nav-menu" id="nav-menu">
+        <a href="build.html">Builder</a>
         <a href="#capabilities">Capabilities</a>
         <a href="#gestures">Gestures</a>
         <a href="#privacy">Privacy</a>
@@ -47,73 +48,36 @@
   </header>
 
   <main id="main">
-    <section class="hero shell" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <div class="eyebrow"><span class="status-dot"></span>Local-first agent workspace</div>
-        <h1 id="hero-title">Your hand is the <em>interface.</em></h1>
-        <p class="hero-lede">Hybrid Agent turns gestures into useful action—routing requests to Gemini, Claude or Ollama, opening apps, and connecting with the devices around you.</p>
+    <section class="build-hero shell" aria-labelledby="hero-title">
+      <div class="build-card">
+        <div class="build-glow" aria-hidden="true"></div>
+        <div class="eyebrow build-eyebrow"><span class="status-dot"></span>AI app builder &middot; Gemini &middot; Claude &middot; Ollama</div>
+        <h1 id="hero-title">What do you want to <em>build?</em></h1>
+        <p class="build-lede">Describe an app and Hybrid Agent builds it live. Or switch to Nexus and let the agent handle tasks on your PC: documents, files, code, apps and messages.</p>
 
-        <div class="hero-actions">
-          <a class="button button-primary" href="console.html">Try the web console <span aria-hidden="true">↗</span></a>
-          <a class="button button-secondary" href="#setup">Run it locally</a>
+        <form class="build-form" id="hero-build" action="build.html" method="get">
+          <label class="sr-only" for="hero-prompt">Describe the app you want</label>
+          <textarea id="hero-prompt" name="prompt" rows="3" required
+            placeholder="A habit tracker with streaks, a weekly chart and a dark mode toggle&hellip;"></textarea>
+          <div class="build-form-bar">
+            <fieldset class="build-modes">
+              <legend class="sr-only">Mode</legend>
+              <label><input type="radio" name="mode" value="build" checked><span>Build an app</span></label>
+              <label><input type="radio" name="mode" value="agent"><span>Ask Nexus to do it</span></label>
+            </fieldset>
+            <button class="build-send" type="submit" aria-label="Build it">Build <span aria-hidden="true">&rarr;</span></button>
+          </div>
+        </form>
+
+        <div class="build-chips" aria-label="Example ideas">
+          <button type="button" data-prompt="A pomodoro timer with a circular progress ring, sound on finish and a session counter">Pomodoro timer</button>
+          <button type="button" data-prompt="An expense tracker: add expenses with a category, see totals and a pie chart by category">Expense tracker</button>
+          <button type="button" data-prompt="A playable snake game with arrow keys and swipe controls, score and high score">Snake game</button>
+          <button type="button" data-prompt="A landing page for a small neighbourhood coffee shop with menu, hours and a map section">Coffee shop site</button>
+          <button type="button" data-prompt="A markdown notes app with a list of notes, live preview and search">Markdown notes</button>
         </div>
 
-        <ul class="hero-facts" aria-label="Project highlights">
-          <li><strong>21</strong><span>hand landmarks</span></li>
-          <li><strong>3</strong><span>model channels</span></li>
-          <li><strong>0</strong><span>camera uploads</span></li>
-        </ul>
-      </div>
-
-      <div class="hero-visual" aria-label="Hybrid Agent activity preview">
-        <div class="orbit orbit-one" aria-hidden="true"></div>
-        <div class="orbit orbit-two" aria-hidden="true"></div>
-        <span class="float-tag tag-input"><span class="mini-hand">✋</span> GESTURE IN</span>
-        <span class="float-tag tag-local"><span class="mini-pulse"></span> LOCAL CORE</span>
-        <span class="float-tag tag-output">ACTION OUT <span aria-hidden="true">↗</span></span>
-
-        <div class="agent-window">
-          <div class="window-bar">
-            <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span>HYBRID_AGENT / LIVE_FEED</span>
-            <span class="window-state"><i></i> READY</span>
-          </div>
-
-          <div class="window-body">
-            <div class="agent-head">
-              <div>
-                <span class="mono-label">ACTIVE ROUTE</span>
-                <strong id="hero-model">OLLAMA / QWEN2.5</strong>
-              </div>
-              <div class="route-pills" aria-label="Available model routes">
-                <span>G</span><span>C</span><span class="active">O</span>
-              </div>
-            </div>
-
-            <div class="gesture-stage" id="hero-gesture-stage">
-              <div class="scan-line" aria-hidden="true"></div>
-              <div class="tracking-grid" aria-hidden="true"></div>
-              <div class="hand-outline" aria-hidden="true">
-                <span class="joint j1"></span><span class="joint j2"></span><span class="joint j3"></span>
-                <span class="hand-line l1"></span><span class="hand-line l2"></span><span class="hand-line l3"></span>
-                <span class="hand-line l4"></span><span class="hand-line l5"></span>
-              </div>
-              <div class="tracking-label"><span></span> HAND DETECTED · 0.98</div>
-            </div>
-
-            <div class="event-stream" aria-label="Recent agent events">
-              <div><span class="event-time">12:42:08</span><code>input.hand</code><b>OPEN_PALM</b></div>
-              <div><span class="event-time">12:42:08</span><code>pointer.move</code><b>412, 268</b></div>
-              <div class="event-highlight"><span class="event-time">12:42:09</span><code>agent.route</code><b>OLLAMA</b></div>
-            </div>
-
-            <div class="window-footer">
-              <span>BRIDGE <b>127.0.0.1</b></span>
-              <span>FRAME <b id="hero-frame">000842</b></span>
-              <span>MODE <b>LOCAL</b></span>
-            </div>
-          </div>
-        </div>
+        <p class="build-alt">Prefer your hands? <a href="console.html">Open the gesture console <span aria-hidden="true">&nearr;</span></a></p>
       </div>
     </section>
 

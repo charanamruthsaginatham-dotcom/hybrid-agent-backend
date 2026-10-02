@@ -74,6 +74,28 @@ SYSTEM_PROMPT = (
     "Answer in at most four sentences, plainly, no preamble."
 )
 
+BUILD_PROMPT = (
+    "You are the code generator behind a web app builder, like bolt.new. "
+    "The user describes an app; you build it as ONE complete, self-contained HTML "
+    "document with all CSS in a <style> tag and all JavaScript in a <script> tag. "
+    "It must run as-is inside a sandboxed iframe: no build step, no imports of local "
+    "files, no fetch to a backend, no localStorage requirement (wrap storage in try/catch). "
+    "External libraries only from https://cdn.jsdelivr.net or https://cdnjs.cloudflare.com, "
+    "fonts only from Google Fonts. Make it polished, responsive and genuinely functional, "
+    "not a mock-up.\n\n"
+    "When the user sends the current code with a change request, return the FULL updated "
+    "document, never a diff or a fragment.\n\n"
+    "Reply format, exactly: one or two plain sentences saying what you built or changed, "
+    "then a single ```html fenced block holding the whole document. Nothing after the block."
+)
+
+#: mode -> (system prompt, output-token budget, request timeout in seconds)
+MODES = {
+    "chat": (SYSTEM_PROMPT, 600, 60),
+    "build": (BUILD_PROMPT, 16000, 300),
+    "agent": ("", 8000, 180),       # system prompt filled in by serve.py from nexus_tools
+}
+
 CUSTOM_ID_OK = re.compile(r"^[a-z][a-z0-9-]{1,23}$")
 
 
@@ -283,60 +305,80 @@ def ollama_models() -> list:
         return []
 
 
-def ask_gemini(prompt: str, model: str, key: str) -> dict:
+def ask_gemini(prompt: str, model: str, key: str, mode: str = "chat") -> dict:
+    system, budget, timeout = MODES[mode]
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{model}:generateContent?key={key}")
     payload = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "system_instruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 600},
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": budget},
     }
-    data = _post(url, payload, {})
+    data = _post(url, payload, {}, timeout=timeout)
     parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [{}])
     return {"text": "".join(p.get("text", "") for p in parts).strip(),
             "model": model, "usage": data.get("usageMetadata", {})}
 
 
-def ask_claude(prompt: str, model: str, key: str) -> dict:
+def ask_claude(prompt: str, model: str, key: str, mode: str = "chat") -> dict:
+    system, budget, timeout = MODES[mode]
     payload = {
         "model": model,
-        "max_tokens": 600,
+        "max_tokens": budget,
         "temperature": 0.4,
-        "system": SYSTEM_PROMPT,
+        "system": system,
         "messages": [{"role": "user", "content": prompt}],
     }
     data = _post("https://api.anthropic.com/v1/messages", payload,
-                 {"x-api-key": key, "anthropic-version": "2023-06-01"})
+                 {"x-api-key": key, "anthropic-version": "2023-06-01"}, timeout=timeout)
     text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
     return {"text": text.strip(), "model": data.get("model", model),
             "usage": data.get("usage", {})}
 
 
-def ask_ollama(prompt: str, model: str, _key: str = "") -> dict:
+def ask_ollama(prompt: str, model: str, _key: str = "", mode: str = "chat") -> dict:
+    """Streamed from Ollama and joined here: a CPU-bound model can take minutes to
+    finish a long reply, and a non-streamed request sits silent until the end."""
+    system, budget, _timeout = MODES[mode]
     payload = {
         "model": model,
-        "stream": False,
-        "options": {"temperature": 0.4},
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT},
+        "stream": True,
+        "options": {"temperature": 0.4, "num_predict": budget},
+        "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": prompt}],
     }
-    data = _post(f"{OLLAMA_HOST}/api/chat", payload, {}, timeout=180)
-    return {"text": (data.get("message") or {}).get("content", "").strip(),
-            "model": data.get("model", model),
-            "usage": {"eval_count": data.get("eval_count")}}
+    req = urllib.request.Request(
+        f"{OLLAMA_HOST}/api/chat", data=json.dumps(payload).encode("utf-8"), method="POST",
+        headers={"Content-Type": "application/json"})
+    parts, last = [], {}
+    # the timeout is per read: it only fires if Ollama goes quiet for this long
+    with urllib.request.urlopen(req, timeout=600) as r:
+        for line in r:
+            if not line.strip():
+                continue
+            last = json.loads(line.decode("utf-8"))
+            if last.get("error"):
+                raise RuntimeError(last["error"])
+            parts.append((last.get("message") or {}).get("content", ""))
+            if last.get("done"):
+                break
+    return {"text": "".join(parts).strip(), "model": last.get("model", model),
+            "usage": {"eval_count": last.get("eval_count")}}
 
 
-def ask_custom(prompt: str, entry: dict) -> dict:
+def ask_custom(prompt: str, entry: dict, mode: str = "chat") -> dict:
     """Generic OpenAI-chat-completions-compatible call - covers Mistral, Groq,
     OpenRouter, DeepSeek, Together, a local llama.cpp/LM Studio server, etc."""
+    system, budget, timeout = MODES[mode]
     payload = {
         "model": entry["model"],
         "temperature": 0.4,
-        "messages": [{"role": "system", "content": SYSTEM_PROMPT},
+        "max_tokens": budget,
+        "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": prompt}],
     }
     headers = {"Authorization": f"Bearer {entry['key']}"} if entry.get("key") else {}
-    data = _post(f"{entry['base_url']}/chat/completions", payload, headers, timeout=90)
+    data = _post(f"{entry['base_url']}/chat/completions", payload, headers, timeout=max(timeout, 90))
     choice = (data.get("choices") or [{}])[0]
     text = (choice.get("message") or {}).get("content", "") or choice.get("text", "")
     return {"text": text.strip(), "model": data.get("model", entry["model"]),
@@ -346,8 +388,11 @@ def ask_custom(prompt: str, entry: dict) -> dict:
 ASK = {"gemini": ask_gemini, "claude": ask_claude, "ollama": ask_ollama}
 
 
-def ask(prompt: str, channel: str = "", model: str = "", user: str | None = None) -> dict:
+def ask(prompt: str, channel: str = "", model: str = "", user: str | None = None,
+        mode: str = "chat") -> dict:
     """Route one prompt. Always returns a dict; never raises for provider faults."""
+    if mode not in MODES:
+        return {"ok": False, "error": f"unknown mode: {mode}"}
     channel = (channel or default_channel(user)).lower()
 
     if channel.startswith("custom:"):
@@ -358,7 +403,7 @@ def ask(prompt: str, channel: str = "", model: str = "", user: str | None = None
         if not entry:
             return {"ok": False, "error": "that model was not found - it may have been removed"}
         try:
-            out = ask_custom(prompt, entry)
+            out = ask_custom(prompt, entry, mode)
         except Exception as exc:                    # noqa: BLE001
             return {"ok": False, "channel": channel, "model": entry["model"], "error": _error(exc)}
         if not out.get("text"):
@@ -392,7 +437,7 @@ def ask(prompt: str, channel: str = "", model: str = "", user: str | None = None
             model = have[0]
 
     try:
-        out = ASK[channel](prompt, model, key)
+        out = ASK[channel](prompt, model, key, mode)
     except Exception as exc:                       # noqa: BLE001 - reported, not raised
         return {"ok": False, "channel": channel, "model": model, "error": _error(exc)}
 
